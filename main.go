@@ -52,10 +52,8 @@ func (t *TodoApp) Refresh() {
 	}
 }
 
-func (t *TodoApp) AddTodo() {
-	for _, item := range t.todos {
-		t.todoList.AddItem(item, "", 0, nil)
-	}
+func (t *TodoApp) AddTodo(item string) {
+	t.todoList.AddItem(item, "", 0, nil)
 }
 
 func main() {
@@ -76,13 +74,14 @@ func main() {
 		SetTextAlign(tview.AlignCenter)
 	help.SetBorder(true).SetTitle(" Help ")
 
-	box := tview.NewFlex().
+	container := tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(todoApp.todoList, 0, 1, true).
 		AddItem(help, 3, 1, false)
 
 	input := tview.NewInputField().
-		SetLabel("Add todo: ")
+		SetLabel("Add todo: ").
+		SetFieldBackgroundColor(tcell.ColorBlack)
 	modal := tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(nil, 0, 1, false).
@@ -97,26 +96,37 @@ func main() {
 		switch key {
 		case tcell.KeyEnter:
 			todoApp.todos = append(todoApp.todos, input.GetText())
-			todoApp.AddTodo()
+			todoApp.AddTodo(input.GetText())
 			todoApp.Save()
-			todoApp.app.SetRoot(box, true).SetFocus(todoApp.todoList)
+			todoApp.Refresh()
+			todoApp.app.SetRoot(container, true).SetFocus(todoApp.todoList)
 		case tcell.KeyEsc:
-			todoApp.app.SetRoot(box, true).SetFocus(todoApp.todoList)
+			todoApp.app.SetRoot(container, true).SetFocus(todoApp.todoList)
 		}
 	})
 
-	todoApp.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	todoApp.todoList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {
 		case 'a':
 			todoApp.app.SetRoot(modal, true).SetFocus(input)
 			return nil
+		}
+		return event
+	})
+
+	todoApp.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Rune() {
 		case 'q':
+			todoApp.app.Stop()
+		}
+
+		if event.Key() == tcell.KeyCtrlC {
 			todoApp.app.Stop()
 		}
 		return event
 	})
 
-	if err := app.SetRoot(box, true).Run(); err != nil {
+	if err := app.SetRoot(container, true).Run(); err != nil {
 		panic(err)
 	}
 }

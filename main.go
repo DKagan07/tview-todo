@@ -22,18 +22,15 @@ func (t *TodoApp) PopulateTodos() error {
 		return err
 	}
 
-	todos := tview.NewList()
-	byte_a := byte('a')
+	t.todoList = tview.NewList()
 	for line := range bytes.SplitSeq(b, []byte("\n")) {
 		if len(line) == 0 {
 			continue
 		}
 
 		t.todos = append(t.todos, string(line))
-		todos.AddItem(string(line), "", rune(byte_a), nil)
-		byte_a++
+		t.AddTodo(string(line))
 	}
-	t.todoList = todos
 	return nil
 }
 
@@ -48,12 +45,19 @@ func (t *TodoApp) Save() error {
 func (t *TodoApp) Refresh() {
 	t.todoList.Clear()
 	for _, item := range t.todos {
-		t.todoList.AddItem(item, "", 0, nil)
+		t.AddTodo(item)
 	}
 }
 
 func (t *TodoApp) AddTodo(item string) {
-	t.todoList.AddItem(item, "", 0, nil)
+	t.todoList.AddItem(item, "", '-', nil)
+}
+
+func (t *TodoApp) DeleteTodo(idx int) {
+	t.todoList = t.todoList.RemoveItem(idx)
+	t.todos = append(t.todos[:idx], t.todos[idx+1:]...)
+	t.Save()
+	t.Refresh()
 }
 
 func main() {
@@ -82,12 +86,15 @@ func main() {
 	input := tview.NewInputField().
 		SetLabel("Add todo: ").
 		SetFieldBackgroundColor(tcell.ColorBlack)
+	inputFrame := tview.NewFrame(input).
+		SetBorders(1, 1, 2, 2, 1, 1)
+
 	modal := tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(nil, 0, 1, false).
 		AddItem(tview.NewFlex().
 			AddItem(nil, 0, 1, false).
-			AddItem(input, 0, 1, true).
+			AddItem(inputFrame, 0, 1, true).
 			AddItem(nil, 0, 1, false),
 			10, 1, true).
 		AddItem(nil, 0, 1, false)
@@ -110,6 +117,9 @@ func main() {
 		case 'a':
 			todoApp.app.SetRoot(modal, true).SetFocus(input)
 			return nil
+		case 'd':
+			currentItemIdx := todoApp.todoList.GetCurrentItem()
+			todoApp.DeleteTodo(currentItemIdx)
 		}
 		return event
 	})

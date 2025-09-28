@@ -54,10 +54,30 @@ func (t *TodoApp) AddTodo(item string) {
 }
 
 func (t *TodoApp) DeleteTodo(idx int) {
-	t.todoList = t.todoList.RemoveItem(idx)
-	t.todos = append(t.todos[:idx], t.todos[idx+1:]...)
-	t.Save()
-	t.Refresh()
+	modal := tview.NewModal().
+		SetText("Are you sure you want to delete this todo?").
+		AddButtons([]string{"Yes", "No"})
+
+	modal.SetBorder(true)
+	modal.SetBorderStyle(tcell.StyleDefault.Background(tcell.ColorBlack))
+	modal.SetBackgroundColor(tcell.ColorBlack)
+	modal.SetBorderColor(tcell.ColorWhite)
+	modal.SetTextColor(tcell.ColorWhite)
+
+	modal.SetDoneFunc(func(_ int, buttonLabel string) {
+		if buttonLabel == "Yes" {
+			t.todoList = t.todoList.RemoveItem(idx)
+			t.todos = append(t.todos[:idx], t.todos[idx+1:]...)
+			if err := t.Save(); err != nil {
+				panic(err)
+			}
+			t.Refresh()
+		}
+		t.app.SetRoot(t.todoList, true).SetFocus(t.todoList)
+	})
+
+	frame := tview.NewFrame(modal).SetBorders(1, 1, 1, 1, 1, 1).Clear()
+	t.app.SetRoot(modal, true).SetFocus(frame)
 }
 
 func main() {
@@ -104,7 +124,9 @@ func main() {
 		case tcell.KeyEnter:
 			todoApp.todos = append(todoApp.todos, input.GetText())
 			todoApp.AddTodo(input.GetText())
-			todoApp.Save()
+			if err := todoApp.Save(); err != nil {
+				panic(err)
+			}
 			todoApp.Refresh()
 			todoApp.app.SetRoot(container, true).SetFocus(todoApp.todoList)
 		case tcell.KeyEsc:

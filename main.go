@@ -31,11 +31,6 @@ func main() {
 
 	todoApp.App.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		// Close the app with q and ctrl+c
-		switch event.Rune() {
-		case 'q':
-			todoApp.App.Stop()
-		}
-
 		if event.Key() == tcell.KeyCtrlC {
 			todoApp.App.Stop()
 		}

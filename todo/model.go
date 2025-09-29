@@ -2,6 +2,7 @@ package model
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"strings"
 
@@ -82,47 +83,97 @@ func (t *TodoApp) DeleteTodo(idx int) {
 
 func (t *TodoApp) SetKeybindings(container *tview.Flex) {
 	// Creating components for the add to todo modal
-	input := tview.NewInputField().
-		SetLabel("Add todo: ").
-		SetFieldBackgroundColor(tcell.ColorBlack)
-	inputFrame := tview.NewFrame(input).
-		SetBorders(1, 1, 2, 2, 1, 1)
-
-	input.SetDoneFunc(func(key tcell.Key) {
-		switch key {
-		case tcell.KeyEnter:
-			t.Todos = append(t.Todos, input.GetText())
-			t.AddTodo(input.GetText())
-			if err := t.Save(); err != nil {
-				panic(err)
-			}
-			t.Refresh()
-			t.App.SetRoot(container, true).SetFocus(t.TodoList)
-		case tcell.KeyEsc:
-			t.App.SetRoot(container, true).SetFocus(t.TodoList)
-		}
-	})
-
-	modal := tview.NewFlex().
-		SetDirection(tview.FlexRow).
-		AddItem(nil, 0, 1, false).
-		AddItem(tview.NewFlex().
-			AddItem(nil, 0, 1, false).
-			AddItem(inputFrame, 0, 1, true).
-			AddItem(nil, 0, 1, false),
-			10, 1, true).
-		AddItem(nil, 0, 1, false)
 
 	// Add the keybinds
 	t.TodoList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {
 		case 'a':
+			input := tview.NewInputField().
+				SetLabel("Add todo: ").
+				SetFieldBackgroundColor(tcell.ColorBlack)
+			inputFrame := tview.NewFrame(input).
+				SetBorders(1, 1, 2, 2, 1, 1)
+			input.SetDoneFunc(func(key tcell.Key) {
+				switch key {
+				case tcell.KeyEnter:
+					t.Todos = append(t.Todos, input.GetText())
+					t.AddTodo(input.GetText())
+					if err := t.Save(); err != nil {
+						panic(err)
+					}
+					t.Refresh()
+					t.App.SetRoot(container, true).SetFocus(t.TodoList)
+				case tcell.KeyEsc:
+					t.App.SetRoot(container, true).SetFocus(t.TodoList)
+				}
+			})
+			modal := tview.NewFlex().
+				SetDirection(tview.FlexRow).
+				AddItem(nil, 0, 1, false).
+				AddItem(tview.NewFlex().
+					AddItem(nil, 0, 1, false).
+					AddItem(inputFrame, 0, 1, true).
+					AddItem(nil, 0, 1, false),
+					10, 1, true).
+				AddItem(nil, 0, 1, false)
+
 			t.App.SetRoot(modal, true).SetFocus(input)
 			return nil
 		case 'd':
 			currentItemIdx := t.TodoList.GetCurrentItem()
 			t.DeleteTodo(currentItemIdx)
+		case 'u':
+			currentItemIdx := t.TodoList.GetCurrentItem()
+			currentItem := t.Todos[currentItemIdx]
+
+			text := tview.NewTextView().
+				SetText(fmt.Sprintf("Current todo: '%s'", currentItem)).
+				SetDynamicColors(true).
+				SetTextAlign(tview.AlignCenter)
+			text.SetBorder(true)
+			text.SetTitle(" Update ")
+
+			input := tview.NewInputField().
+				SetLabel("Update todo: ").
+				SetFieldBackgroundColor(tcell.ColorBlack)
+			input.SetBorder(true)
+			input.SetTitle(" Update To ")
+			inputFrame := tview.NewFrame(input).
+				SetBorders(2, 2, 2, 2, 2, 2)
+			input.SetDoneFunc(func(key tcell.Key) {
+				switch key {
+				case tcell.KeyEnter:
+					t.Todos[currentItemIdx] = input.GetText()
+					if err := t.Save(); err != nil {
+						panic(err)
+					}
+					t.Refresh()
+					t.App.SetRoot(container, true).SetFocus(t.TodoList)
+				case tcell.KeyEsc:
+					t.App.SetRoot(container, true).SetFocus(t.TodoList)
+				}
+			})
+
+			modal := tview.NewFlex().
+				SetDirection(tview.FlexRow).
+				AddItem(nil, 0, 1, false).
+				AddItem(tview.NewFlex().
+					AddItem(nil, 0, 1, false).
+					AddItem(text, 0, 1, false).
+					AddItem(nil, 0, 1, false),
+					3, 3, false).
+				AddItem(tview.NewFlex().
+					AddItem(nil, 0, 1, false).
+					AddItem(inputFrame, 0, 1, true).
+					AddItem(nil, 0, 1, false),
+					10, 1, true).
+				AddItem(nil, 0, 1, false)
+
+			t.App.SetRoot(modal, true).SetFocus(input)
+		case 'q':
+			t.App.Stop()
 		}
+
 		return event
 	})
 }
